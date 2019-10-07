@@ -11,7 +11,7 @@ re_null = re.compile(r'\n|&nbsp|\xa0|\\xa0|\u3000|\\u3000|\\u0020|\u0020|\t|\r')
 # 获取 区 信息
 class AllDistrict:
 
-    def __init__(self, city):
+    def __init__(self, city=None):
         self.__lian_jia_session = LianJiaSession(city)
         self.__yaml_data = self.__lian_jia_session.get_prop()
         self.__house_list = []
@@ -58,5 +58,8 @@ class AllDistrict:
 
 
 if __name__ == '__main__':
-    filename, city = sys.argv
-    AllDistrict(city).parse()
+    if len(sys.argv) == 2:
+        filename, city = sys.argv
+        AllDistrict(city).parse()
+    else:
+        AllDistrict().parse()

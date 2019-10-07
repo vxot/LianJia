@@ -1,15 +1,13 @@
+# 默认城市
+city: wuhan
 # 日志路径
 log_path: C:\Users\Administrator\Desktop\LianJia\
-# 链家用户名
-username: username
-# 链家密码
-password: password
 # 小区最少房源数，低于则不爬取
 min_house: 10
 # 生产者线程数
-producer_num: 1
+producer_num: 4
 # 消费者线程数
-consumer_num: 1
+consumer_num: 2
 # 城市配置信息
 cities:
 #  城市名

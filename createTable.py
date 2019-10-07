@@ -114,8 +114,12 @@ def create_view(engine):
 
 
 if __name__ == '__main__':
-    filename, city = sys.argv
-    lian_jia_session = LianJiaSession(city)
+    if len(sys.argv) == 2:
+        filename, city = sys.argv
+        lian_jia_session = LianJiaSession(city)
+    else:
+        lian_jia_session = LianJiaSession()
+
     engine = lian_jia_session.get_sql_engine()
 
     base.metadata.create_all(engine)  # 创建表结构

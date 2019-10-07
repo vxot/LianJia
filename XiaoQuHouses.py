@@ -16,7 +16,7 @@ class XiaoQuHouses(threading.Thread):
         self.__xiao_qu_queue = xiao_qu_queue
         self.__xiao_qu_id_soup_queue = xiao_qu_id_soup_queue
         self.__lian_jia_session = lian_jia_session
-        self.__yaml_data = self.__lian_jia_session.get_prop()
+        self.min_house = self.__lian_jia_session.get_prop_value('min_house')
         self.__logger = self.__lian_jia_session.get_logger()
         self.__sql_session = self.__lian_jia_session.get_sql_session()
         self.__base_url = self.__lian_jia_session.get_city_url()
@@ -41,7 +41,7 @@ class XiaoQuHouses(threading.Thread):
                 # 更新小区在售房源数(其它数据没更新)
                 if xiao_qu.zai_shou != total:
                     self.__updata_zai_shou(total, xiao_qu.id)
-                if total < self.__yaml_data['min_house']:
+                if total < self.min_house:
                     self.__logger.info('小区房源[{0}({3})] , 数量({2})太少，跳过] ===> url[{1}] '.format(xiao_qu.name, xiao_qu.url, total, xiao_qu.id))
                 elif total > 800:
                     self.__logger.error('小区房源[id: {0}] , 数量({2})异常 ===> url[{1}] '.format(xiao_qu.name, xiao_qu.url, total))
@@ -77,7 +77,6 @@ class ParseXiaoQuPage(threading.Thread):
         threading.Thread.__init__(self)
         self.__xiao_qu_id_soup_queue = xiao_qu_id_soup_queue
         self.__lian_jia_session = lian_jia_session
-        self.__yaml_data = self.__lian_jia_session.get_prop()
         self.__logger = self.__lian_jia_session.get_logger()
         self.__sql_session = self.__lian_jia_session.get_sql_session()
         self.__base_url = self.__lian_jia_session.get_city_url()
@@ -217,11 +216,11 @@ class ParseXiaoQuPage(threading.Thread):
         self.__sql_session.add_all(price_change_not_list)
 
     def __deal_house(self, url):
-        url2 = '{0}/ershoufang/{1}.html'.format(self.__yaml_data['base_url'], url)
+        url2 = '{0}/ershoufang/{1}.html'.format(self.__base_url, url)
         rep = self.__lian_jia_session.get(url2)
         if rep.status_code == 404:
             self.__logger.info('house[{0}] 404'.format(url))
-            self.__deal_not(url)
+            # self.__deal_not(url)
         elif '/chengjiao/' in rep.url:
             self.__logger.info('house[{0}] 成交'.format(url))
             self.__deal_cheng_jiao(rep, url)
@@ -236,7 +235,7 @@ class ParseXiaoQuPage(threading.Thread):
                     span_text = span.get_text(strip=True)
                     if span_text == '已下架':
                         self.__logger.info('house[{0}] 已下架'.format(url))
-                        self.__deal_not(url)
+                        # self.__deal_not(url)
                     else:
                         self.__logger.info('house[{0}] ?????'.format(url))
                 else:
@@ -326,12 +325,12 @@ class ChengJiao2:
 
     def __init__(self, lian_jia_session):
         self.__lian_jia_session = lian_jia_session
-        self.__yaml_data = self.__lian_jia_session.get_prop()
+        self.base_url = self.__lian_jia_session.get_city_url()
         self.__logger = self.__lian_jia_session.get_logger()
         self.__sql_session = self.__lian_jia_session.get_sql_session()
 
     def parse(self):
-        url = '{0}/chengjiao/'.format(self.__yaml_data['base_url'])
+        url = '{0}/chengjiao/'.format(self.base_url)
         rep = self.__lian_jia_session.get(url)
         soup = BeautifulSoup(rep.text, 'lxml')
         total = soup.find('div', attrs={'class', 'total'}).find('span').get_text(strip=True)
@@ -344,7 +343,7 @@ class ChengJiao2:
         for url in page_url_list:
             i += 1
             self.__logger.info('progress {0}'.format(i/t))
-            rep = self.__lian_jia_session.get(self.__yaml_data['base_url'] + url)
+            rep = self.__lian_jia_session.get(self.base_url + url)
             soup = BeautifulSoup(rep.text, 'lxml')
             self.__parse_soup(soup)
 

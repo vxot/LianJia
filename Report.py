@@ -8,7 +8,7 @@ import sys
 
 class Report:
 
-    def __init__(self, report_date, city):
+    def __init__(self, report_date, city=None):
         lj_session = LianJiaSession(city)
         engine = lj_session.get_sql_engine()
         self.__yaml_data = lj_session.get_prop()
@@ -230,7 +230,14 @@ if '__main__' == __name__:
     filename, city, report_date = sys.argv
     plt.rcParams['font.sans-serif'] = ['KaiTi']  # 指定默认字体
     plt.rcParams['axes.unicode_minus'] = False  # 解决保存图像是负号'-'显示为方块的问题
-
     # 今日    昨日  本周 上周(周一)
-    report = Report(report_date, city)
+    if len(sys.argv) == 3:
+        filename, report_date, city = sys.argv
+        report = Report(report_date, city)
+    elif len(sys.argv) == 2:
+        filename, report_date = sys.argv
+        report = Report(report_date)
+    else:
+        report_date = '今日'
+        report = Report(report_date)
     report.report()

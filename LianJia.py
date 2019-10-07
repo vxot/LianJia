@@ -8,7 +8,7 @@ from session import LianJiaSession
 
 class LianJia:
 
-    def __init__(self, city):
+    def __init__(self, city=None):
         self.lian_jia_session = LianJiaSession(city)
         self.__yaml_data = self.lian_jia_session.get_prop()
         self.__house_list = []
@@ -69,8 +69,9 @@ class LianJia:
 
 
 if '__main__' == __name__:
-    filename, city = sys.argv
-    # print(city)
-    # city = 'shenzhen'
-    lianJia = LianJia(city)
+    if len(sys.argv) == 2:
+        filename, city = sys.argv
+        lianJia = LianJia(city)
+    else:
+        lianJia = LianJia()
     lianJia.parse()

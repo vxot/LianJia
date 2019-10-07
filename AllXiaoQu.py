@@ -85,5 +85,8 @@ class AllXiaoQu:
 
 
 if __name__ == '__main__':
-    filename, city = sys.argv
-    AllXiaoQu(city).get_xiao_qu_list()
+    if len(sys.argv) == 2:
+        filename, city = sys.argv
+        AllXiaoQu(city).get_xiao_qu_list()
+    else:
+        AllXiaoQu().get_xiao_qu_list()

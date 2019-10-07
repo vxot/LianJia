@@ -12,17 +12,19 @@ properties_filse = 'properties.yml'
 
 class LianJiaSession:
 
-    def __init__(self, city):
-        self.city = city
+    def __init__(self, city=None):
         with open(properties_filse, 'r', encoding="utf-8") as f:
             self.yaml_data = yaml.load(f.read(), Loader=yaml.FullLoader)
+        if city is None:
+            self.city = self.yaml_data['city']
+        else:
+            self.city = city
         self.__logger_name = 'lianjia'
         self.__init_logger()
         self.__headers = self.get_headers()
         self.__logger = logging.getLogger(self.__logger_name)
-        self.__username = str(self.yaml_data['username'])
         self.__web_session = self.__login()
-        self.__logger.info('login...username[{0}]'.format(self.__username))
+        self.__logger.info('爬城市[{0}]'.format(self.city))
 
     def get(self, url):
         try:
@@ -33,7 +35,7 @@ class LianJiaSession:
 
     def __login(self):
         web_session = requests.Session()
-        ori_data = 'username=' + self.__username + '&password=' + str(self.yaml_data['password']) + '&code=&' \
+        ori_data = 'username=aa&password=bb&code=&' \
                    'service=https%3A%2F%2Fajax.api.lianjia.com%2Flogin%2Flogin%2Fgetuserinfo&' \
                    'isajax=true&_eventId=submit&remember=1&' \
                    'lt=LT-159472-MJo29Q6dVcEP1Nk3R00jzzGghfKdTd-upassport.lianjia.com&execution=e2s1'
@@ -46,7 +48,6 @@ class LianJiaSession:
         return web_session
 
     def __get_city_conf(self):
-        # city = self.yaml_data['city']
         if 'cities' in self.yaml_data and self.city in self.yaml_data['cities']:
             city_conf = self.yaml_data['cities'][self.city]
         else:
@@ -79,6 +80,9 @@ class LianJiaSession:
 
     def get_prop(self):
         return self.yaml_data
+
+    def get_prop_value(self, key):
+        return self.yaml_data[key]
 
     def get_logger(self):
         return logging.getLogger(self.__logger_name)
