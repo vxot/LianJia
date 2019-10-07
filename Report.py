@@ -227,7 +227,6 @@ class Report:
 
 
 if '__main__' == __name__:
-    filename, city, report_date = sys.argv
     plt.rcParams['font.sans-serif'] = ['KaiTi']  # 指定默认字体
     plt.rcParams['axes.unicode_minus'] = False  # 解决保存图像是负号'-'显示为方块的问题
     # 今日    昨日  本周 上周(周一)
@@ -237,7 +236,7 @@ if '__main__' == __name__:
     elif len(sys.argv) == 2:
         filename, report_date = sys.argv
         report = Report(report_date)
-    else:
+    elif len(sys.argv) == 1:
         report_date = '今日'
         report = Report(report_date)
     report.report()
