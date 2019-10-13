@@ -10,6 +10,7 @@ class Report:
 
     def __init__(self, report_date, city=None):
         lj_session = LianJiaSession(city)
+        self.city = lj_session.city
         engine = lj_session.get_sql_engine()
         self.__yaml_data = lj_session.get_prop()
         self.root_path = lj_session.get_log_path()
@@ -109,7 +110,7 @@ class Report:
                   )
         plt.setp(autotexts, size=8, weight="bold")
         ax.set_title("武汉二手房获取检测样本新增房源（{0}）".format(self.get_date_str()))
-        path = os.path.join(self.root_path, 'newHouse.png')
+        path = os.path.join(self.root_path, 'newHouse_{0}.png'.format(self.city))
         plt.savefig(path)
 
     def image(self, labels, zhang_arr, die_arr):
@@ -140,7 +141,7 @@ class Report:
         autolabel(rects1)
         autolabel(rects2)
         fig.tight_layout()
-        path = os.path.join(self.root_path, 'priceChange5percent.png')
+        path = os.path.join(self.root_path, 'priceChange5percent_{0}.png'.format(self.city))
         plt.savefig(path)
 
     def get_zd_count(self, zd=None, fu_du=None, district=None):

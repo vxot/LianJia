@@ -24,7 +24,7 @@ class LianJiaSession:
         self.__headers = self.get_headers()
         self.__logger = logging.getLogger(self.__logger_name)
         self.__web_session = self.__login()
-        self.__logger.info('爬城市[{0}]'.format(self.city))
+        self.__logger.info('开始爬城市[{0}]'.format(self.city))
 
     def get(self, url):
         try:

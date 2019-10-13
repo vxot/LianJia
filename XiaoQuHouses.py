@@ -100,9 +100,9 @@ class ParseXiaoQuPage(threading.Thread):
                 self.__sql_session.add_all(price_change_list)
                 self.__sql_session.add_all(new_house_list)
                 self.__sql_session.commit()
-                houses = self.__sql_session.query(House).filter(House.xiao_qu == xiao_qu_id).filter(House.status == False).all()
-                for house in houses:
-                    self.__deal_house(house.url)
+                # houses = self.__sql_session.query(House).filter(House.xiao_qu == xiao_qu_id).filter(House.status == False).all()
+                # for house in houses:
+                #     self.__deal_house(house.url)
                 # 记录小区 已经 爬过
                 xiao_qu = self.__sql_session.query(XiaoQu).filter(XiaoQu.id == xiao_qu_id).one_or_none()
                 xiao_qu.status = True
@@ -200,20 +200,21 @@ class ParseXiaoQuPage(threading.Thread):
             self.__logger.info('房源[{0}] 挂牌价变动! [{1} ===> {2}]'.format(house_exist.url, price_change.pre_price, price_change.price))
             return price_change
 
-    def __deal_price_change_not(self, house_not):
-        price_change_list = self.__sql_session.query(PriceChange).filter(PriceChange.house_id == house_not.ori_id).all()
-        price_change_not_list = []
+    def __deal_price_change_not(self, ori_house, house_not_id):
+        price_change_list = self.__sql_session.query(PriceChange).filter(PriceChange.house_id == ori_house.id).all()
         for priceChange in price_change_list:
             price_change_not = PriceChangeNot()
             price_change_not.pre_price = priceChange.pre_price
             price_change_not.price = priceChange.price
-            price_change_not.house_not_id = house_not.id
+            price_change_not.house_not_id = house_not_id
             price_change_not.change_time = priceChange.change_time
             price_change_not.create_time = datetime.now()
-            price_change_not_list.append(price_change_not)
             self.__sql_session.delete(priceChange)
+            self.__sql_session.add(price_change_not)
+            self.__logger.info('{0} 删除房子[{1}]'.format(self.getName(), ori_house.url))
         self.__sql_session.commit()
-        self.__sql_session.add_all(price_change_not_list)
+        self.__sql_session.delete(ori_house)
+        self.__sql_session.commit()
 
     def __deal_house(self, url):
         url2 = '{0}/ershoufang/{1}.html'.format(self.__base_url, url)
@@ -223,7 +224,7 @@ class ParseXiaoQuPage(threading.Thread):
             # self.__deal_not(url)
         elif '/chengjiao/' in rep.url:
             self.__logger.info('house[{0}] 成交'.format(url))
-            self.__deal_cheng_jiao(rep, url)
+            # self.__deal_cheng_jiao(rep, url)
         else:
             soup = BeautifulSoup(rep.text, 'lxml')
             h1 = soup.find('h1', attrs={'class', 'main'})
@@ -247,9 +248,7 @@ class ParseXiaoQuPage(threading.Thread):
         cheng_jiao.url = url
         not_exist = self.__sql_session.query(House).filter(House.url == url).one_or_none()
         if not_exist is not None:
-            print(not_exist)
             cheng_jiao.ori_id = not_exist.id
-            self.__sql_session.delete(not_exist)
         soup = BeautifulSoup(rep.text, 'lxml')
         span = soup.find('div', attrs={'class', 'house-title'}).find('div', attrs={'class', 'wrapper'}).find('span')
         if span is not None:
@@ -288,17 +287,17 @@ class ParseXiaoQuPage(threading.Thread):
                 text = text[:text.find('浏')]
                 cheng_jiao.liu_lan = float(text)
         self.__sql_session.add(cheng_jiao)
+        # 提交事务，生成id
         self.__sql_session.commit()
         if not_exist is not None:
-            self.__deal_price_change_not(cheng_jiao)
+            self.__deal_price_change_not(not_exist, cheng_jiao.id)
 
     def __deal_not(self, url):
-        self.__logger.info('{0} the house is not_exists url[{1}]'.format(self.getName(), url))
+        self.__logger.info('{0} 房子不存在 url[{1}]'.format(self.getName(), url))
         not_exist = self.__sql_session.query(House).filter(House.url == url).one()
         house_not = ParseXiaoQuPage.get_house_not(not_exist)
         self.__sql_session.add(house_not)
-        self.__deal_price_change_not(house_not)
-        self.__sql_session.delete(not_exist)
+        self.__deal_price_change_not(not_exist, house_not.id)
         self.__sql_session.commit()
 
     @staticmethod

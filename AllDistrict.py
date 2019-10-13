@@ -48,7 +48,7 @@ class AllDistrict:
                 if name not in self.__district_names and url not in exclude_url:
                     district = District()
                     district.name = name
-                    district.url = url
+                    district.url = str(url)
                     if parent_id:
                         district.parent = parent_id
                     self.__logger.info('add district name[{0}], url[{1}], parentId[{2}]'.format(name, url, parent_id))

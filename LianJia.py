@@ -74,4 +74,4 @@ if '__main__' == __name__:
         lianJia = LianJia(city)
     else:
         lianJia = LianJia()
-    lianJia.parse()
+    lianJia.parse(is_breaking=False)
