@@ -29,7 +29,7 @@ cities:
   shenzhen:
     db.hostname: localhost
     db.port: 3306
-    db.database: lianjia_shenzhen
+    db.database: shenzhen
     db.username: root
     db.passwort: root
     url: https://sz.lianjia.com

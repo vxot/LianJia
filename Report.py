@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import matplotlib.pyplot as plt
 import numpy as np
 from session import LianJiaSession
@@ -18,12 +18,14 @@ class Report:
         conn = engine.raw_connection()
         self.cursor = conn.cursor()
         self.query_time = report_date
+        self.today = datetime.today()
+        self.date_str = self.get_date_str()
 
     def report(self):
         argvs = dict()
         argvs['min_house'] = self.__yaml_data['min_house']
         argvs['query_date'] = self.query_time
-        argvs['date'] = self.get_date_str()
+        argvs['date'] = self.date_str
 
         total_house = self.total_house()
         argvs['total_house'] = total_house
@@ -109,8 +111,8 @@ class Report:
                   bbox_to_anchor=(1, 0, 0.5, 1)
                   )
         plt.setp(autotexts, size=8, weight="bold")
-        ax.set_title("武汉二手房获取检测样本新增房源（{0}）".format(self.get_date_str()))
-        path = os.path.join(self.root_path, 'newHouse_{0}.png'.format(self.city))
+        ax.set_title("武汉二手房获取检测样本新增房源（{0}）".format(self.date_str))
+        path = os.path.join(self.root_path, 'newHouse_{0}_{1}.png'.format(self.city, self.date_str))
         plt.savefig(path)
 
     def image(self, labels, zhang_arr, die_arr):
@@ -123,7 +125,7 @@ class Report:
 
         # Add some text for labels, title and custom x-axis tick labels, etc.
         ax.set_ylabel('房源数')
-        ax.set_title('武汉二手房获取检测样本挂牌价涨跌幅5%以内（{0}）'.format(self.get_date_str()))
+        ax.set_title('武汉二手房获取检测样本挂牌价涨跌幅5%以内（{0}）'.format(self.date_str))
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
         ax.legend()
@@ -141,33 +143,33 @@ class Report:
         autolabel(rects1)
         autolabel(rects2)
         fig.tight_layout()
-        path = os.path.join(self.root_path, 'priceChange5percent_{0}.png'.format(self.city))
+        path = os.path.join(self.root_path, 'priceChange5percent_{0}_{1}.png'.format(self.city, self.date_str))
         plt.savefig(path)
 
     def get_zd_count(self, zd=None, fu_du=None, district=None):
         where_sql = self.get_where(zd=zd, fu_du=fu_du, district=district)
         select_sql = 'SELECT count(*) FROM price_change_com p, house h, xiao_qu xq, district_area d '
-        sql = '{0} where {1}'.format(select_sql, where_sql)
+        sql = '{0} WHERE {1}'.format(select_sql, where_sql)
         self.cursor.execute(sql)
         return self.cursor.fetchone()[0]
 
     def get_where(self, zd, fu_du=None, district=None):
         where_sql = 'p.house_id = h.id AND xq.id = h.xiao_qu AND xq.district = d.id '
         if '今日' == self.query_time:
-            where_sql += ' AND p.change_time  >= date_sub(now(), interval 3 hour) '
-            # where_sql += ' AND TO_DAYS(p.change_time) = TO_DAYS(NOW()) '
+            where_sql += ' AND TO_DAYS(p.change_time) = TO_DAYS(NOW()) '
         elif '昨日' == self.query_time:
             where_sql += ' AND TO_DAYS(p.change_time) = TO_DAYS(NOW())-1 '
         elif '本周' == self.query_time:
             where_sql += ' AND TO_DAYS(p.change_time) >= TO_DAYS(NOW())-6 '
-        elif '上周(周一)' == self.query_time:
-            where_sql += 'AND TO_DAYS( p.change_time ) >= TO_DAYS(NOW())-7 ' + \
-                        'AND TO_DAYS( p.change_time ) <= TO_DAYS(NOW())-1'
+        elif '上周' == self.query_time:
+            where_sql += ' AND(date_format(p.change_time, "%Y-%m-%d")) = YEARWEEK(now())-1 '
+        elif '上月' == self.query_time:
+            where_sql += ' AND PERIOD_DIFF(date_format( now(),"%Y%m" ) , date_format(p.change_time,"%Y%m")) =1 '
+
         if zd == 'z':
             where_sql += ' AND p.priceChange>0 '
         elif zd == 'd':
             where_sql += ' AND p.priceChange<0 '
-
         if fu_du:
             where_sql += ' AND p.fudu<{0} and p.fudu>-{0} '.format(fu_du)
         if district:
@@ -175,14 +177,17 @@ class Report:
         return where_sql
 
     def get_date_str(self):
-        date_str = datetime.now().strftime("%Y.%m.%d")
+        date_str = self.today.strftime("%Y.%m.%d")
         if '昨日' == self.query_time:
-            date_str = (datetime.now() + timedelta(days=-1)).strftime("%Y.%m.%d")
+            date_str = (self.today + timedelta(days=-1)).strftime("%Y.%m.%d")
         elif '本周' == self.query_time:
-            date_str = (datetime.now() + timedelta(days=-6)).strftime("%Y.%m.%d") + ' -- ' + date_str
-        elif '上周(周一)' == self.query_time:
-            date_str = (datetime.now() + timedelta(days=-7)).strftime("%Y.%m.%d") + ' -- ' + \
-                       (datetime.now() + timedelta(days=-1)).strftime("%Y.%m.%d")
+            date_str = (self.today + timedelta(days=-6)).strftime("%Y.%m.%d") + ' -- ' + date_str
+        elif '上周' == self.query_time:
+            year, week, day = self.today.isocalendar()
+            date_str = (self.today + timedelta(days=-6 - day)).strftime("%Y.%m.%d") + ' -- ' + \
+                       (self.today + timedelta(days=-day)).strftime("%Y.%m.%d")
+        elif '上月' == self.query_time:
+            date_str = '{0}月份'.format(self.today.month-1)
         return date_str
 
     def total_house(self):
@@ -208,20 +213,20 @@ class Report:
 
     def get_new_house_count(self, district=None):
         if '今日' == self.query_time:
-            where = 'where h.create_time  >= date_sub(now(), interval 3 hour) '
-            # where = 'where TO_DAYS(h.create_time) = TO_DAYS(NOW()) '
+            where = ' WHERE TO_DAYS(h.create_time) = TO_DAYS(NOW()) '
         elif '昨日' == self.query_time:
-            where = 'where TO_DAYS(h.create_time) >= TO_DAYS(NOW())-1 '
+            where = ' WHERE TO_DAYS(h.create_time) >= TO_DAYS(NOW())-1 '
         elif '本周' == self.query_time:
-            where = 'where TO_DAYS(h.create_time) >= TO_DAYS(NOW())-6 '
-        elif '上周(周一)' == self.query_time:
-            where = 'where TO_DAYS(h.create_time) >= TO_DAYS(NOW())-7 ' + \
-                    'AND TO_DAYS(h.create_time) <= TO_DAYS(NOW())-1 '
+            where = ' WHERE TO_DAYS(h.create_time) >= TO_DAYS(NOW())-6 '
+        elif '上周' == self.query_time:
+            where = ' WHERE YEARWEEK(date_format(h.create_time, "%Y-%m-%d")) = YEARWEEK(now())-1'
+        elif '上月' == self.query_time:
+            where = ' WHERE PERIOD_DIFF(date_format( now(), "%Y%m") , date_format(h.create_time, "%Y%m")) =1'
         if district is None:
             select = 'select count(*) from house h '
         else:
             select = 'select count(*) from house h , xiao_qu xq, district_area d '
-            where += ' AND h.xiao_qu=xq.id AND xq.district=d.id AND d.district="{}"'.format(district)
+            where += ' AND h.xiao_qu=xq.id AND xq.district=d.id AND d.district="{0}"'.format(district)
         self.cursor.execute(select + where)
         total = self.cursor.fetchone()[0]
         return total
@@ -230,7 +235,7 @@ class Report:
 if '__main__' == __name__:
     plt.rcParams['font.sans-serif'] = ['KaiTi']  # 指定默认字体
     plt.rcParams['axes.unicode_minus'] = False  # 解决保存图像是负号'-'显示为方块的问题
-    # 今日    昨日  本周 上周(周一)
+    # 今日  昨日  本周 上周
     if len(sys.argv) == 3:
         filename, report_date, city = sys.argv
         report = Report(report_date, city)
@@ -238,6 +243,6 @@ if '__main__' == __name__:
         filename, report_date = sys.argv
         report = Report(report_date)
     elif len(sys.argv) == 1:
-        report_date = '今日'
+        report_date = '昨日'
         report = Report(report_date)
     report.report()

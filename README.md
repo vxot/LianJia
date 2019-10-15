@@ -18,25 +18,25 @@
     python createTable.py [shenzhen]（城市名，可选，如不填则从配置文件取默认城市，下同）  
 
 4. 获取区域信息
-    python AllDistrict.py [shenzhen]（城市名）  
+    python AllDistrict.py [shenzhen]（城市名，可选）  
     ![Image text](https://raw.githubusercontent.com/vxot/LianJia/master/image/AllDistrict.jpg)  
 
 5. 获取所有小区
-    python AllXiaoQu.py [shenzhen]（城市名）  
+    python AllXiaoQu.py [shenzhen]（城市名，可选）  
     ![Image text](https://raw.githubusercontent.com/vxot/LianJia/master/image/AllDistrict.jpg)  
    
 6. 开始爬所有在售二手房
-    python LianJia.py [shenzhen]（城市名）  
+    python LianJia.py [shenzhen]（城市名，可选）  
     ![Image text](https://raw.githubusercontent.com/vxot/LianJia/master/image/AllHouse.jpg)  
 
 **三. 执行方法**  
 每天执行如下步骤：  
 1. 爬数据  
-    python LianJia.py [shenzhen]（城市名）  
+    python LianJia.py [shenzhen]（城市名，可选）  
     ![Image text](https://raw.githubusercontent.com/vxot/LianJia/master/image/parseLog.jpg)  
  
 2. 生成报表  
-    python Report.py 昨日（日期，可选今日，昨日，本周，上周(周一)） [shenzhen]（城市名） 
+    python Report.py [今日]（日期，默认今日，可选今日，昨日，本周，上周, 上月） [shenzhen]（城市名，可选） 
     ![Image text](https://raw.githubusercontent.com/vxot/LianJia/master/image/newHouse.png)  
     ![Image text](https://raw.githubusercontent.com/vxot/LianJia/master/image/priceChange5percent.png)  
 
