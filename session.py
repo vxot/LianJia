@@ -90,7 +90,12 @@ class LianJiaSession:
     def __get_log_path(self):
         now = datetime.now()
         time_str = now.strftime("%Y%m%d")
-        self.__log_path = os.path.join(self.yaml_data['log_path'], time_str)
+        log_path = os.path.join(os.getcwd(), 'logs')
+        if 'log_path' in self.yaml_data:
+            log_path = self.yaml_data['log_path']
+        if not os.path.exists(log_path):
+            os.mkdir(log_path)
+        self.__log_path = os.path.join(log_path, time_str)
         if not os.path.exists(self.__log_path):
             os.mkdir(self.__log_path)
 

@@ -20,6 +20,8 @@ class AllDistrict:
         self.__base_url = self.__lian_jia_session.get_city_url()
         # 为了防止名字相同，重复录入
         self.__district_names = set()
+        # 添加已有district 信息
+        self.get_exixt_district_url()
 
     def parse(self):
         a_arr = self.__parse_html('{0}/xiaoqu/'.format(self.__base_url))
@@ -55,6 +57,11 @@ class AllDistrict:
                     districts.append(district)
                     self.__district_names.add(name)
         return districts
+
+    def get_exixt_district_url(self):
+        districts = self.__sql_session.query(District).all()
+        for d in districts:
+            self.__district_names.add(d.name)
 
 
 if __name__ == '__main__':

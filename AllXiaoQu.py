@@ -12,7 +12,7 @@ re_null = re.compile(r'\n|&nbsp|\xa0|\\xa0|\u3000|\\u3000|\\u0020|\u0020|\t|\r')
 # 获district 所有小区
 class AllXiaoQu:
 
-    def __init__(self, city):
+    def __init__(self, city=None):
         self.__lian_jia_session = LianJiaSession(city)
         self.__yaml_data = self.__lian_jia_session.get_prop()
         self.__logger = self.__lian_jia_session.get_logger()
@@ -47,7 +47,7 @@ class AllXiaoQu:
             soup = BeautifulSoup(rep.text, 'lxml')
             xiao_qu_list2 = self.__parse_page(soup, district.id)
             xiao_qu_list.extend(xiao_qu_list2)
-        self.__logger.info('小区发现房源 ==> {0}'.format(len(xiao_qu_list)))
+        self.__logger.info('添加小区数量 ==> {0}'.format(len(xiao_qu_list)))
         return xiao_qu_list
 
     def __parse_page(self, soup, district):
