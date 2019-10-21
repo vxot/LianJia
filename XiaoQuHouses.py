@@ -4,6 +4,7 @@ from datetime import datetime, date
 from bs4 import BeautifulSoup
 import utils
 import os
+import traceback
 from createTable import House, PriceChange, PriceChangeNot, HouseNot, ChengJiao, XiaoQu
 
 re_null = re.compile(r'\n|&nbsp|\xa0|\\xa0|\u3000|\\u3000|\\u0020|\u0020|\t|\r')
@@ -18,7 +19,7 @@ class XiaoQuHouses(threading.Thread):
         self.__lian_jia_session = lian_jia_session
         self.min_house = self.__lian_jia_session.get_prop_value('min_house')
         self.__logger = self.__lian_jia_session.get_logger()
-        self.__sql_session = self.__lian_jia_session.get_sql_session()
+        self.sql_session = self.__lian_jia_session.get_sql_session()
         self.__base_url = self.__lian_jia_session.get_city_url()
 
     def run(self):
@@ -56,8 +57,8 @@ class XiaoQuHouses(threading.Thread):
                     self.__xiao_qu_id_soup_queue.put((xiao_qu.id, soup_arr))
             else:
                 self.__logger.error('rep is None,小区小区[{0}] url[{1}]'.format(xiao_qu.name, xiao_qu.url))
-        except Exception as e:
-            self.__logger.error(e)
+        except Exception:
+            self.__logger.error(traceback.format_exc())
 
     def __parse_other_page(self, url):
         self.__logger.info('{0} start parse other page url[{1}]'.format(self.getName(), url))
@@ -68,8 +69,8 @@ class XiaoQuHouses(threading.Thread):
 
     def __updata_zai_shou(self, total, xiao_qu_id):
         self.__logger.info('{2} 更新小区[{0}]在售房源 {1}]'.format(xiao_qu_id, total, self.getName()))
-        self.__sql_session.execute('update xiao_qu set zai_shou = {0} where id = {1}'.format(total, xiao_qu_id))
-        self.__sql_session.commit()
+        self.sql_session.execute('update xiao_qu set zai_shou = {0} where id = {1}'.format(total, xiao_qu_id))
+        self.sql_session.commit()
 
 
 class ParseXiaoQuPage(threading.Thread):
@@ -78,7 +79,7 @@ class ParseXiaoQuPage(threading.Thread):
         self.__xiao_qu_id_soup_queue = xiao_qu_id_soup_queue
         self.__lian_jia_session = lian_jia_session
         self.__logger = self.__lian_jia_session.get_logger()
-        self.__sql_session = self.__lian_jia_session.get_sql_session()
+        self.sql_session = self.__lian_jia_session.get_sql_session()
         self.__base_url = self.__lian_jia_session.get_city_url()
 
     def run(self):
@@ -92,23 +93,23 @@ class ParseXiaoQuPage(threading.Thread):
             try:
                 self.__logger.info('{0} ==> 剩余soup数 : {1} , 开始爬取小区[{2}], soup数量[{3}]'.format(
                     self.getName(), self.__xiao_qu_id_soup_queue.qsize(), xiao_qu_id, len(soup_arr)))
-                exist_houses = self.__sql_session.query(House).filter(House.xiao_qu == xiao_qu_id)
+                exist_houses = self.sql_session.query(House).filter(House.xiao_qu == xiao_qu_id).all()
                 for item in exist_houses:
                     exist_house_map[item.url] = item
                 for soup in soup_arr:
                     self.__parse_page(xiao_qu_id, soup, exist_house_map, new_house_list, price_change_list)
-                self.__sql_session.add_all(price_change_list)
-                self.__sql_session.add_all(new_house_list)
-                self.__sql_session.commit()
-                # houses = self.__sql_session.query(House).filter(House.xiao_qu == xiao_qu_id).filter(House.status == False).all()
+                self.sql_session.add_all(price_change_list)
+                self.sql_session.add_all(new_house_list)
+                self.sql_session.commit()
+                # houses = self.sql_session.query(House).filter(House.xiao_qu == xiao_qu_id).filter(House.status == False).all()
                 # for house in houses:
                 #     self.__deal_house(house.url)
                 # 记录小区 已经 爬过
-                xiao_qu = self.__sql_session.query(XiaoQu).filter(XiaoQu.id == xiao_qu_id).one_or_none()
+                xiao_qu = self.sql_session.query(XiaoQu).filter(XiaoQu.id == xiao_qu_id).one_or_none()
                 xiao_qu.status = True
-                self.__sql_session.commit()
-            except Exception as e:
-                self.__logger.error(e)
+                self.sql_session.commit()
+            except Exception:
+                self.__logger.error(self.__logger.error(traceback.format_exc()))
         self.__logger.info('{0} ==> completed'.format(self.getName()))
 
     def __parse_page(self, xiao_qu_id, soup, exist_house_map, new_house_list, price_change_list):
@@ -152,35 +153,28 @@ class ParseXiaoQuPage(threading.Thread):
         address_text = div.find('div', attrs={'class', 'address'}).get_text(strip=True)
         address_text = re_null.sub('', address_text)
         address_arr = address_text.split('|')
-        exist_house = self.__sql_session.query(House).filter(House.url == url).one_or_none()
+        exist_house = self.sql_session.query(House).filter(House.url == url).one_or_none()
         if exist_house is not None:
             self.__check_price(exist_house, price, unit_price)
-        elif address_arr[1] != '车位':
+        elif '车位' not in address_arr:
             house = House()
             house.url = url
             house.title = title
-            flood_text = div.find('div', attrs={'class', 'positionInfo'}).get_text(strip=True)
             follow_text = div.find('div', attrs={'class', 'followInfo'}).get_text(strip=True)
             house.price = price
             house.unit_price = unit_price
             house.star = int(follow_text[0:follow_text.index('人')])
 
-            if len(address_arr) == 6:
-                house.flood = address_arr[1]
-                del address_arr[1]
+            if len(address_arr) != 7:
+                self.__logger.error('特殊情况，没处理。url[{0}]error: {1}'.format(url, address_text))
+                # house.flood = address_arr[1]
+                # del address_arr[1]
             house.xiao_qu = xiao_qu_id
-            house.hu_xing = address_arr[1]
-
-            area = address_arr[2]
-            area = area[0:area.index('平米')]
-            house.area = float(area)
-
-            house.chao_xiang = address_arr[3]
-            house.zhuang_xiu = address_arr[4]
-            if house.flood:
-                house.flood = house.flood + ' ' + flood_text
-            else:
-                house.flood = flood_text
+            house.hu_xing = address_arr[0]
+            house.area = float(re.findall(r"\d+\.?\d*", address_arr[1])[0])
+            house.chao_xiang = address_arr[2]
+            house.zhuang_xiu = address_arr[3]
+            house.flood = address_arr[4]
             house.create_time = datetime.now()
             # 标记，以免误认为是删除的房源
             house.status = True
@@ -201,7 +195,7 @@ class ParseXiaoQuPage(threading.Thread):
             return price_change
 
     def __deal_price_change_not(self, ori_house, house_not_id):
-        price_change_list = self.__sql_session.query(PriceChange).filter(PriceChange.house_id == ori_house.id).all()
+        price_change_list = self.sql_session.query(PriceChange).filter(PriceChange.house_id == ori_house.id).all()
         for priceChange in price_change_list:
             price_change_not = PriceChangeNot()
             price_change_not.pre_price = priceChange.pre_price
@@ -209,12 +203,12 @@ class ParseXiaoQuPage(threading.Thread):
             price_change_not.house_not_id = house_not_id
             price_change_not.change_time = priceChange.change_time
             price_change_not.create_time = datetime.now()
-            self.__sql_session.delete(priceChange)
-            self.__sql_session.add(price_change_not)
+            self.sql_session.delete(priceChange)
+            self.sql_session.add(price_change_not)
             self.__logger.info('{0} 删除房子[{1}]'.format(self.getName(), ori_house.url))
-        self.__sql_session.commit()
-        self.__sql_session.delete(ori_house)
-        self.__sql_session.commit()
+        self.sql_session.commit()
+        self.sql_session.delete(ori_house)
+        self.sql_session.commit()
 
     def __deal_house(self, url):
         url2 = '{0}/ershoufang/{1}.html'.format(self.__base_url, url)
@@ -246,7 +240,7 @@ class ParseXiaoQuPage(threading.Thread):
         self.__logger.info('处理成交 : {0}'.format(url))
         cheng_jiao = ChengJiao()
         cheng_jiao.url = url
-        not_exist = self.__sql_session.query(House).filter(House.url == url).one_or_none()
+        not_exist = self.sql_session.query(House).filter(House.url == url).one_or_none()
         if not_exist is not None:
             cheng_jiao.ori_id = not_exist.id
         soup = BeautifulSoup(rep.text, 'lxml')
@@ -286,19 +280,19 @@ class ParseXiaoQuPage(threading.Thread):
             elif '浏' in text:
                 text = text[:text.find('浏')]
                 cheng_jiao.liu_lan = float(text)
-        self.__sql_session.add(cheng_jiao)
+        self.sql_session.add(cheng_jiao)
         # 提交事务，生成id
-        self.__sql_session.commit()
+        self.sql_session.commit()
         if not_exist is not None:
             self.__deal_price_change_not(not_exist, cheng_jiao.id)
 
     def __deal_not(self, url):
         self.__logger.info('{0} 房子不存在 url[{1}]'.format(self.getName(), url))
-        not_exist = self.__sql_session.query(House).filter(House.url == url).one()
+        not_exist = self.sql_session.query(House).filter(House.url == url).one()
         house_not = ParseXiaoQuPage.get_house_not(not_exist)
-        self.__sql_session.add(house_not)
+        self.sql_session.add(house_not)
         self.__deal_price_change_not(not_exist, house_not.id)
-        self.__sql_session.commit()
+        self.sql_session.commit()
 
     @staticmethod
     def get_house_not(house):
@@ -326,7 +320,7 @@ class ChengJiao2:
         self.__lian_jia_session = lian_jia_session
         self.base_url = self.__lian_jia_session.get_city_url()
         self.__logger = self.__lian_jia_session.get_logger()
-        self.__sql_session = self.__lian_jia_session.get_sql_session()
+        self.sql_session = self.__lian_jia_session.get_sql_session()
 
     def parse(self):
         url = '{0}/chengjiao/'.format(self.base_url)
@@ -369,8 +363,8 @@ class ChengJiao2:
             cheng_jiao.zhou_qi = zhou_qi
             cheng_jiao.flood = flood
             cheng_jiao_list.append(cheng_jiao)
-        self.__sql_session.add_all(cheng_jiao_list)
-        self.__sql_session.commit()
+        self.sql_session.add_all(cheng_jiao_list)
+        self.sql_session.commit()
 
 
 if __name__ == '__main__':
