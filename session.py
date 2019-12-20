@@ -29,9 +29,9 @@ class LianJiaSession:
     def get(self, url):
         try:
             rep = self.__web_session.get(url, headers=self.__headers)
+            return rep
         except Exception as e:
             self.__logger.error(e)
-        return rep
 
     def __login(self):
         web_session = requests.Session()

@@ -101,21 +101,23 @@ class ParseXiaoQuPage(threading.Thread):
                 self.sql_session.add_all(price_change_list)
                 self.sql_session.add_all(new_house_list)
                 self.sql_session.commit()
-                # houses = self.sql_session.query(House).filter(House.xiao_qu == xiao_qu_id).filter(House.status == False).all()
-                # for house in houses:
-                #     self.__deal_house(house.url)
-                # 记录小区 已经 爬过
+                houses = self.sql_session.query(House).filter(House.xiao_qu == xiao_qu_id).filter(House.status == False).all()
+                for house in houses:
+                    self.__deal_house(house.url)
+                # 断点，记录小区 已经 爬过
                 xiao_qu = self.sql_session.query(XiaoQu).filter(XiaoQu.id == xiao_qu_id).one_or_none()
                 xiao_qu.status = True
                 self.sql_session.commit()
             except Exception:
                 self.__logger.error(self.__logger.error(traceback.format_exc()))
-        self.__logger.info('{0} ==> completed'.format(self.getName()))
+        self.__logger.info('{0} ==> consumer_num completed'.format(self.getName()))
 
     def __parse_page(self, xiao_qu_id, soup, exist_house_map, new_house_list, price_change_list):
+        # 新房
         url_set = set()
         exist_set = set()
         li_arr = soup.select('ul.sellListContent li')
+        exist_urls = exist_house_map.keys()
         for li in li_arr:
             div = li.div
             url, title = utils.get_url_title(div)
@@ -125,7 +127,7 @@ class ParseXiaoQuPage(threading.Thread):
             unit_price_text = div.find('div', attrs={'class', 'unitPrice'}).get_text(strip=True)
             unit_price_text = unit_price_text[unit_price_text.find('价')+1:unit_price_text.find('元')]
             unit_price = float(unit_price_text)
-            if url in exist_house_map.keys():
+            if url in exist_urls:
                 exist_set.add(url)
                 exist_house = exist_house_map.get(url)
                 price_change = self.__check_price(exist_house, price, unit_price)
@@ -137,9 +139,9 @@ class ParseXiaoQuPage(threading.Thread):
                 if new_house is not None:
                     new_house_list.append(new_house)
             else:
-                self.__logger.info('===========================异常房源url {0}'.format(url))
+                self.__logger.info('error ===========================异常房源url {0}'.format(url))
         if len(li_arr) != len(exist_set) + len(url_set):
-            self.__logger.error('小区[{0}]解析数量错误'.format(xiao_qu_id))
+            self.__logger.error('error 小区[{0}]解析数量错误'.format(xiao_qu_id))
         if len(li_arr) == 0:
             file_path = self.__lian_jia_session.get_log_path()
             now = datetime.now()
@@ -205,7 +207,7 @@ class ParseXiaoQuPage(threading.Thread):
             price_change_not.create_time = datetime.now()
             self.sql_session.delete(priceChange)
             self.sql_session.add(price_change_not)
-            self.__logger.info('{0} 删除房子[{1}]'.format(self.getName(), ori_house.url))
+        self.__logger.info('{0} 删除房子[{1}]'.format(self.getName(), ori_house.url))
         self.sql_session.commit()
         self.sql_session.delete(ori_house)
         self.sql_session.commit()
@@ -215,10 +217,10 @@ class ParseXiaoQuPage(threading.Thread):
         rep = self.__lian_jia_session.get(url2)
         if rep.status_code == 404:
             self.__logger.info('house[{0}] 404'.format(url))
-            # self.__deal_not(url)
+            self.__deal_not(url)
         elif '/chengjiao/' in rep.url:
             self.__logger.info('house[{0}] 成交'.format(url))
-            # self.__deal_cheng_jiao(rep, url)
+            self.__deal_cheng_jiao(rep, url)
         else:
             soup = BeautifulSoup(rep.text, 'lxml')
             h1 = soup.find('h1', attrs={'class', 'main'})
@@ -230,7 +232,7 @@ class ParseXiaoQuPage(threading.Thread):
                     span_text = span.get_text(strip=True)
                     if span_text == '已下架':
                         self.__logger.info('house[{0}] 已下架'.format(url))
-                        # self.__deal_not(url)
+                        self.__deal_not(url)
                     else:
                         self.__logger.info('house[{0}] ?????'.format(url))
                 else:
@@ -287,7 +289,6 @@ class ParseXiaoQuPage(threading.Thread):
             self.__deal_price_change_not(not_exist, cheng_jiao.id)
 
     def __deal_not(self, url):
-        self.__logger.info('{0} 房子不存在 url[{1}]'.format(self.getName(), url))
         not_exist = self.sql_session.query(House).filter(House.url == url).one()
         house_not = ParseXiaoQuPage.get_house_not(not_exist)
         self.sql_session.add(house_not)
@@ -314,62 +315,9 @@ class ParseXiaoQuPage(threading.Thread):
         return house2
 
 
-class ChengJiao2:
-
-    def __init__(self, lian_jia_session):
-        self.__lian_jia_session = lian_jia_session
-        self.base_url = self.__lian_jia_session.get_city_url()
-        self.__logger = self.__lian_jia_session.get_logger()
-        self.sql_session = self.__lian_jia_session.get_sql_session()
-
-    def parse(self):
-        url = '{0}/chengjiao/'.format(self.base_url)
-        rep = self.__lian_jia_session.get(url)
-        soup = BeautifulSoup(rep.text, 'lxml')
-        total = soup.find('div', attrs={'class', 'total'}).find('span').get_text(strip=True)
-        total = int(total)
-        page_url_list = utils.get_all_page(soup)
-        print(total)
-        self.__parse_soup(soup)
-        i = 0
-        t = len(page_url_list)
-        for url in page_url_list:
-            i += 1
-            self.__logger.info('progress {0}'.format(i/t))
-            rep = self.__lian_jia_session.get(self.base_url + url)
-            soup = BeautifulSoup(rep.text, 'lxml')
-            self.__parse_soup(soup)
-
-    def __parse_soup(self, soup):
-        li_arr = soup.select('ul.listContent li')
-        cheng_jiao_list = []
-        for li in li_arr:
-            cheng_jiao = ChengJiao()
-            info_div = li.find('div', attrs={'class', 'info'})
-            url, title = utils.get_url_title(info_div)
-            deal_date = info_div.find('div', attrs={'class', 'dealDate'}).get_text(strip=True)
-            y_m_d = deal_date.split('.')
-            deal_date = date(int(y_m_d[0]), int(y_m_d[1]), int(y_m_d[2]))
-            deal_cycle_txt = info_div.find('span', attrs={'class', 'dealCycleTxt'}).get_text(strip=True)
-            flood = info_div.find('div', attrs={'class', 'positionInfo'}).get_text(strip=True)
-            gua_pai_jia = deal_cycle_txt[deal_cycle_txt.find('牌') + 1:deal_cycle_txt.find('万')]
-            gua_pai_jia = float(gua_pai_jia)
-            zhou_qi = deal_cycle_txt[deal_cycle_txt.find('期') + 1:deal_cycle_txt.find('天')]
-            zhou_qi = int(zhou_qi)
-            cheng_jiao.url = url
-            cheng_jiao.title = title
-            cheng_jiao.deal_date = deal_date
-            cheng_jiao.gua_pai_jia = gua_pai_jia
-            cheng_jiao.zhou_qi = zhou_qi
-            cheng_jiao.flood = flood
-            cheng_jiao_list.append(cheng_jiao)
-        self.sql_session.add_all(cheng_jiao_list)
-        self.sql_session.commit()
-
-
 if __name__ == '__main__':
     # web_session = session.LianJiaSession().login()
-    # cheng_jiao = ChenJiao(web_session)
+    # cheng_jiao = ChenJiao2(web_session)
     # cheng_jiao.parse()
     # url = '104102319630'
     # rep = web_session.get('https://wh.lianjia.com/ershoufang/{0}.html'.format(url), headers=session.headers)

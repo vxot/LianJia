@@ -63,7 +63,7 @@ class HouseNot(base):
     zhuang_xiu = Column(String(64))
     chao_xiang = Column(String(16))
     star = Column(Integer)
-    url = Column(String(128))
+    url = Column(String(128), unique=True)
     create_time = Column(DATETIME)
     end_time = Column(DATETIME, server_default=func.now())
 
@@ -73,15 +73,30 @@ class ChengJiao(base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     # 记录之前的id，一遍跟踪之前的价格变化
     ori_id = Column(Integer)
+    title = Column(String(128))
+    # 成交价
     price = Column(FLOAT(8))
     gua_pai_jia = Column(FLOAT(8))
     unit_price = Column(FLOAT(8))
+    # 建筑面积
+    area1 = Column(FLOAT(8))
+    # 套内面积
+    area2 = Column(FLOAT(8))
+    flood = Column(String(32))
+    hu_xing = Column(String(32))
+    zhuang_xiu = Column(String(64))
+    chao_xiang = Column(String(16))
+    # 交易属性
+    prop = Column(String(16))
     star = Column(Integer)
-    url = Column(String(128))
+    url = Column(String(128), unique=True)
     zhou_qi = Column(Integer)
     tiao_jia = Column(Integer)
     dai_kan = Column(Integer)
     liu_lan = Column(Integer)
+    nian_dai = Column(Integer)
+    # 房屋年限，满二年、满五年
+    nian_xian = Column(String(16))
     deal_date = Column(DATE)
 
 
@@ -114,6 +129,10 @@ def create_view(engine):
 
 
 if __name__ == '__main__':
+    view = False
+    if len(sys.argv) == 3:
+        filename, city, view = sys.argv
+        lian_jia_session = LianJiaSession(city)
     if len(sys.argv) == 2:
         filename, city = sys.argv
         lian_jia_session = LianJiaSession(city)
@@ -123,4 +142,5 @@ if __name__ == '__main__':
     engine = lian_jia_session.get_sql_engine()
 
     base.metadata.create_all(engine)  # 创建表结构
-    create_view(engine)
+    if view:
+        create_view(engine)

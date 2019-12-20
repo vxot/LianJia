@@ -157,6 +157,8 @@ class Report:
         where_sql = 'p.house_id = h.id AND xq.id = h.xiao_qu AND xq.district = d.id '
         if '今日' == self.query_time:
             where_sql += ' AND TO_DAYS(p.change_time) = TO_DAYS(NOW()) '
+        elif '最近' == self.query_time:
+            where_sql += ' AND TO_DAYS(p.change_time) >= DATE_SUB(NOW(),INTERVAL  3 HOUR) '
         elif '昨日' == self.query_time:
             where_sql += ' AND TO_DAYS(p.change_time) = TO_DAYS(NOW())-1 '
         elif '本周' == self.query_time:
@@ -214,6 +216,8 @@ class Report:
     def get_new_house_count(self, district=None):
         if '今日' == self.query_time:
             where = ' WHERE TO_DAYS(h.create_time) = TO_DAYS(NOW()) '
+        elif '最近' == self.query_time:
+            where = ' WHERE TO_DAYS(h.create_time) >= DATE_SUB(NOW(),INTERVAL  3 HOUR) '
         elif '昨日' == self.query_time:
             where = ' WHERE TO_DAYS(h.create_time) >= TO_DAYS(NOW())-1 '
         elif '本周' == self.query_time:
@@ -235,7 +239,7 @@ class Report:
 if '__main__' == __name__:
     plt.rcParams['font.sans-serif'] = ['KaiTi']  # 指定默认字体
     plt.rcParams['axes.unicode_minus'] = False  # 解决保存图像是负号'-'显示为方块的问题
-    # 今日  昨日  本周 上周
+    # 今日  昨日  本周 上周 上月
     if len(sys.argv) == 3:
         filename, report_date, city = sys.argv
         report = Report(report_date, city)
@@ -243,6 +247,6 @@ if '__main__' == __name__:
         filename, report_date = sys.argv
         report = Report(report_date)
     elif len(sys.argv) == 1:
-        report_date = '昨日'
+        report_date = '今日'
         report = Report(report_date)
     report.report()

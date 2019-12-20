@@ -16,7 +16,8 @@
 3. 新建数据库表、视图  
     执行如下命令，新建数据库表  
     python createTable.py [shenzhen]（城市名，可选，如不填则从配置文件取默认城市，下同）  
-
+    python createTable.py [shenzhen] [True] (创建视图 可选，初始化时需建立)
+    
 4. 获取区域信息
     python AllDistrict.py [shenzhen]（城市名，可选）  
     ![Image text](https://raw.githubusercontent.com/vxot/LianJia/master/image/AllDistrict.jpg)  
