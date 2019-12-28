@@ -73,6 +73,7 @@ class ChengJiao(base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     # 记录之前的id，一遍跟踪之前的价格变化
     ori_id = Column(Integer)
+    xiao_qu = Column(Integer, ForeignKey('xiao_qu.id'))
     title = Column(String(128))
     # 成交价
     price = Column(FLOAT(8))

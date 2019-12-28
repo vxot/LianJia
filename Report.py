@@ -11,6 +11,7 @@ class Report:
     def __init__(self, report_date, city=None):
         lj_session = LianJiaSession(city)
         self.city = lj_session.city
+        self.city_zh = lj_session.get_city_zh()
         engine = lj_session.get_sql_engine()
         self.__yaml_data = lj_session.get_prop()
         self.root_path = lj_session.get_log_path()
@@ -26,6 +27,7 @@ class Report:
         argvs['min_house'] = self.__yaml_data['min_house']
         argvs['query_date'] = self.query_time
         argvs['date'] = self.date_str
+        argvs['city_zh'] = self.city_zh
 
         total_house = self.total_house()
         argvs['total_house'] = total_house
@@ -82,7 +84,7 @@ class Report:
         # print('总计 {0} {1} {2}'.format(new_total, zt, dt))
         self.image(district_arr, zhang_arr, die_arr)
         self.get_new_house_pie(district_arr, new_house_arr)
-        format_str = "武汉{query_date}({date})二手房大数据(来源于某家网)：\n" \
+        format_str = "{city_zh}{query_date}({date})二手房大数据(来源于某家网)：\n" \
               "数据来源于{xiao_qu_count}个小区（在售房源大于等于{min_house}套），新增房源{new_house_count}套。\n" \
               "挂牌价格变动房源共计{total_price_change}套，" \
                      "其中涨价{zhang_jia}套（{zhang_jia_p:.2f}%），跌价{die_jia}套（{die_jia_p:.2f}%）。\n" \

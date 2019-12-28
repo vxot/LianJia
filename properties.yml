@@ -3,9 +3,9 @@ city: wuhan
 # 日志路径,默认当前文件夹下logs文件夹
 #log_path: C:\Users\Administrator\Desktop\LianJia\
 # 小区最少房源数，低于则不爬取
-min_house: 100
+min_house: 10
 # 生产者线程数,负责获取数据，建议1-4
-producer_num: 1
+producer_num: 3
 # 消费者线程数，负责解析数据，建议1-2
 consumer_num: 1
 # 城市配置信息
@@ -19,6 +19,7 @@ cities:
     db.username: root
     db.passwort: root
     url: https://sh.lianjia.com
+    zh: 上海
   wuhan:
     db.hostname: localhost
     db.port: 3306
@@ -26,6 +27,7 @@ cities:
     db.username: root
     db.passwort: root
     url: https://wh.lianjia.com
+    zh: 武汉
   shenzhen:
     db.hostname: localhost
     db.port: 3306
@@ -33,6 +35,7 @@ cities:
     db.username: root
     db.passwort: root
     url: https://sz.lianjia.com
+    zh: 深圳
   dongguan:
     db.hostname: localhost
     db.port: 3306
@@ -40,6 +43,7 @@ cities:
     db.username: root
     db.passwort: root
     url: https://dg.lianjia.com
+    zh: 东莞
   huizhou:
     db.hostname: localhost
     db.port: 3306
@@ -47,6 +51,7 @@ cities:
     db.username: root
     db.passwort: root
     url: https://hui.lianjia.com
+    zh: 惠州
   fuzhou:
     db.hostname: localhost
     db.port: 3306
@@ -54,3 +59,4 @@ cities:
     db.username: root
     db.passwort: root
     url: https://fz.lianjia.com
+    zh: 福州

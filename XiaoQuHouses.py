@@ -101,9 +101,9 @@ class ParseXiaoQuPage(threading.Thread):
                 self.sql_session.add_all(price_change_list)
                 self.sql_session.add_all(new_house_list)
                 self.sql_session.commit()
-                houses = self.sql_session.query(House).filter(House.xiao_qu == xiao_qu_id).filter(House.status == False).all()
-                for house in houses:
-                    self.__deal_house(house.url)
+                # houses = self.sql_session.query(House).filter(House.xiao_qu == xiao_qu_id).filter(House.status == False).all()
+                # for house in houses:
+                #     self.__deal_house(house.url)
                 # 断点，记录小区 已经 爬过
                 xiao_qu = self.sql_session.query(XiaoQu).filter(XiaoQu.id == xiao_qu_id).one_or_none()
                 xiao_qu.status = True

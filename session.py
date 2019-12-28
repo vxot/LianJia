@@ -1,10 +1,11 @@
+import logging
+import os
+from datetime import datetime
+
 import requests
+import yaml
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import yaml
-import logging
-from datetime import datetime
-import os
 
 login_url = 'https://upassport.lianjia.com/login'
 properties_filse = 'properties.yml'
@@ -19,12 +20,13 @@ class LianJiaSession:
             self.city = self.yaml_data['city']
         else:
             self.city = city
+        self.city_zh = self._get_city_zh()
         self.__logger_name = 'lianjia'
         self.__init_logger()
         self.__headers = self.get_headers()
         self.__logger = logging.getLogger(self.__logger_name)
         self.__web_session = self.__login()
-        self.__logger.info('开始爬城市[{0}]'.format(self.city))
+        self.__logger.info('开始爬城市[{0}]'.format(self.city_zh))
 
     def get(self, url):
         try:
@@ -63,6 +65,13 @@ class LianJiaSession:
     def get_city_url(self):
         city_conf = self.__get_city_conf()
         return city_conf['url']
+
+    def _get_city_zh(self):
+        city_conf = self.__get_city_conf()
+        return city_conf['zh']
+
+    def get_city_zh(self):
+        return self.city_zh
 
     def get_sql_engine(self):
         city_conf = self.__get_city_conf()
