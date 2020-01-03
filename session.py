@@ -26,6 +26,7 @@ class LianJiaSession:
         self.__headers = self.get_headers()
         self.__logger = logging.getLogger(self.__logger_name)
         self.__web_session = self.__login()
+        self.__logger.error("登录失败！")
         self.__logger.info('开始爬城市[{0}]'.format(self.city_zh))
 
     def get(self, url):
@@ -36,17 +37,20 @@ class LianJiaSession:
             self.__logger.error(e)
 
     def __login(self):
-        web_session = requests.Session()
-        ori_data = 'username=aa&password=bb&code=&' \
-                   'service=https%3A%2F%2Fajax.api.lianjia.com%2Flogin%2Flogin%2Fgetuserinfo&' \
-                   'isajax=true&_eventId=submit&remember=1&' \
-                   'lt=LT-159472-MJo29Q6dVcEP1Nk3R00jzzGghfKdTd-upassport.lianjia.com&execution=e2s1'
-        ori_data_arr = ori_data.split('&')
-        data = {}
-        for item in ori_data_arr:
-            key_value = item.split('=')
-            data[key_value[0]] = key_value[1]
-        web_session.post(login_url, data, headers=self.__headers)
+        try:
+            web_session = requests.Session()
+            ori_data = 'username=aa&password=bb&code=&' \
+                       'service=https%3A%2F%2Fajax.api.lianjia.com%2Flogin%2Flogin%2Fgetuserinfo&' \
+                       'isajax=true&_eventId=submit&remember=1&' \
+                       'lt=LT-159472-MJo29Q6dVcEP1Nk3R00jzzGghfKdTd-upassport.lianjia.com&execution=e2s1'
+            ori_data_arr = ori_data.split('&')
+            data = {}
+            for item in ori_data_arr:
+                key_value = item.split('=')
+                data[key_value[0]] = key_value[1]
+            web_session.post(login_url, data, headers=self.__headers)
+        except Exception:
+            return None
         return web_session
 
     def __get_city_conf(self):

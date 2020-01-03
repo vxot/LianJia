@@ -93,6 +93,10 @@ class Report:
         report_str = format_str.format(**argvs)
         self.logging.info(report_str)
 
+    def get_house_cout(self):
+        pass
+
+
     def get_xiao_qu_count(self):
         sql = 'select count(*) from xiao_qu xq where xq.zai_shou>=' + str(self.__yaml_data['min_house'])
         self.cursor.execute(sql)
