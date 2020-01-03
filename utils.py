@@ -47,4 +47,4 @@ def reset_xiao_qu_status(sql_session, is_breaking=False):
         xiao_qus = sql_session.query(XiaoQu)
         for item in xiao_qus:
             item.status = False
-    sql_session.commit()
+        sql_session.commit()

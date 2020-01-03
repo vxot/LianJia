@@ -12,21 +12,29 @@ from session import LianJiaSession
 class ChengJiaoHouse:
 
     def __init__(self, city=None):
+        # 如果是爬最新房源，最大数没有限制
+        self.max_count = -1
         self.lian_jia_session = LianJiaSession(city)
         self.__yaml_data = self.lian_jia_session.get_prop()
         self.base_url = self.lian_jia_session.get_city_url()
         self.__logger = self.lian_jia_session.get_logger()
         self.sql_session = self.lian_jia_session.get_sql_session()
 
-    def test(self, is_breaking=False):
-        xiao_qus = self.sql_session.query(XiaoQu).filter(XiaoQu.status == False).filter(XiaoQu.zai_shou >= self.__yaml_data['min_house']).all()
-        for xiao_qu in xiao_qus:
-            cjs = self.sql_session.query(ChengJiao).filter(ChengJiao.xiao_qu == xiao_qu.id).all()
-            if len(cjs) > 0:
-                xiao_qu.status = True
-        self.sql_session.commit()
+    def test(self):
+        houses = self.sql_session.query(ChengJiao).all()
+        for house in houses:
+            args = house.title.split(' ')
+            if len(args) == 3:
+                xiao_qu = self.__get_xiao_qu_id_by_name(args[0])
+                if xiao_qu is None:
+                    self.__logger.info('找不到小区[{0}] url[{1}]'.format(args[0], house.url))
+                elif xiao_qu.id != house.xiao_qu:
+                    self.__logger.info('[{4}]小区不匹配[{0}][{1}] 期望[{2}] 实际[{3}]'.format(house.title, house.url,
+                        xiao_qu.id, house.xiao_qu, house.deal_date))
 
-    def parse(self, is_breaking=False):
+    def parse_all(self, is_breaking=False):
+        # 用这个来标记是查询所有小区
+        self.max_count = 1000
         utils.reset_xiao_qu_status(self.sql_session, is_breaking)
         xiao_qu_queue = self.__get_xiao_qu_map()
         t = xiao_qu_queue.qsize()
@@ -37,7 +45,7 @@ class ChengJiaoHouse:
             xiao_qu = xiao_qu_queue.get()
             if xiao_qu is None:
                 break
-            url = 'https://wh.lianjia.com/chengjiao/c{0}/'.format(xiao_qu.url)
+            url = '{0}/chengjiao/c{1}/'.format(self.base_url, xiao_qu.url)
             self.parse_page(url, xiao_qu.id)
             xiao_qu.status = True
             self.sql_session.commit()
@@ -51,17 +59,19 @@ class ChengJiaoHouse:
         soup = BeautifulSoup(rep.text, 'lxml')
         total = soup.find('div', attrs={'class', 'total'}).find('span').get_text(strip=True)
         total = int(total)
-        if total > 1000:
+        if self.max_count > 0 and total > 1000:
             self.__logger.info('error 小区[{0}] 发现房源数异常[{1}]'.format(url, total))
         else:
             self.__logger.info('发现总房源{0}套'.format(total))
             page_url_list = utils.get_all_page(soup)
             self.__parse_soup(soup, xiao_qu_id)
-            # i = 0
-            # t = len(page_url_list)
+            i = 0
+            t = len(page_url_list)
             for url in page_url_list:
-                # i += 1
-                # self.__logger.info('当前小区 progress {:0.2f}'.format(i/t))
+                i += 1
+                # 如果是查询最新的，输出进度信息，
+                if self.max_count == -1:
+                    self.__logger.info('当前小区 progress {:0.2f}'.format(i/t))
                 rep = self.lian_jia_session.get(self.base_url + url)
                 soup = BeautifulSoup(rep.text, 'lxml')
                 self.__parse_soup(soup, xiao_qu_id)
@@ -69,12 +79,12 @@ class ChengJiaoHouse:
     def __get_xiao_qu_id_by_name(self, name):
         xiao_qus = self.sql_session.query(XiaoQu).filter(XiaoQu.name == name).all()
         if len(xiao_qus) == 1:
-            return xiao_qus[0].id
+            return xiao_qus[0]
         elif len(xiao_qus) > 1:
             self.__logger.info('error 找多个同名小区 名称[{0}]'.format(name))
             return None
         else:
-            self.__logger.info('error 找不到小区 名称[{0}]'.format(name))
+            # self.__logger.info('error 找不到小区 名称[{0}]'.format(name))
             return None
 
     def __parse_soup(self, soup, xiao_qu_id):
@@ -90,8 +100,12 @@ class ChengJiaoHouse:
                 args = title.split(' ')
                 if len(args) == 3:
                     if xiao_qu_id is None:
-                        xiao_qu_id = self.__get_xiao_qu_id_by_name(args[0])
-                    cheng_jiao.xiao_qu = xiao_qu_id
+                        xiao_qu = self.__get_xiao_qu_id_by_name(args[0])
+                        if xiao_qu is not None:
+                            xiao_qu_id = xiao_qu.id
+                            cheng_jiao.xiao_qu = xiao_qu_id
+                    else:
+                        cheng_jiao.xiao_qu = xiao_qu_id
                     price = info_div.find('div', attrs={'class', 'totalPrice'}).find('span', attrs={'class', 'number'}).get_text(strip=True)
                     unit_price = info_div.find('div', attrs={'class', 'unitPrice'}).find('span', attrs={'class', 'number'}).get_text(strip=True)
                     cheng_jiao.price = float(price)
@@ -114,7 +128,7 @@ class ChengJiaoHouse:
                     cheng_jiao.hu_xing = args[1]
                     cheng_jiao.area1 = float(re.findall(r"\d+\.?\d*", args[2])[0])
                     cheng_jiao_list.append(cheng_jiao)
-                    self.__logger.info('url[{0}] 标题[{1}] 价格[{2}] 单价[{3}] 成交日期[{4}]'.format(
+                    self.__logger.info('url[{0}] 标题[{1}] 总价[{2}] 单价[{3}] 成交日期[{4}]'.format(
                         url, title, gua_pai_jia, unit_price, deal_date))
             self.sql_session.add_all(cheng_jiao_list)
         self.sql_session.commit()
@@ -134,4 +148,6 @@ if '__main__' == __name__:
         chengJiaoHouse = ChengJiaoHouse(city)
     else:
         chengJiaoHouse = ChengJiaoHouse()
-    chengJiaoHouse.parse(True)
+    chengJiaoHouse.parse_all(True)
+    # chengJiaoHouse.parse_latest()
+    # chengJiaoHouse.test()

@@ -149,7 +149,7 @@ class ParseXiaoQuPage(threading.Thread):
             xiao_qu_html = os.path.join(file_path, str(xiao_qu_id) + '_' + time_str + '.html')
             with open(xiao_qu_html, 'w', encoding='utf-8') as f:
                 f.write(soup.prettify())
-        self.__logger.info('小区[{5}]该页li个数[{0}]检测旧房源{1}[{2}]\n发现新房源{3}[{4}]'.format(len(li_arr), len(exist_set), ','.join(exist_set), len(url_set), ','.join(url_set), xiao_qu_id))
+        self.__logger.info('小区[{5}]该页li个数[{0}]检测旧房源[{1}][{2}]\n发现新房源[{3}][{4}]'.format(len(li_arr), len(exist_set), ','.join(exist_set), len(url_set), ','.join(url_set), xiao_qu_id))
 
     def __init_new_house(self, div, url, price, unit_price, title, xiao_qu_id):
         address_text = div.find('div', attrs={'class', 'address'}).get_text(strip=True)
