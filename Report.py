@@ -16,6 +16,7 @@ class Report:
         self.__yaml_data = lj_session.get_prop()
         self.root_path = lj_session.get_log_path()
         self.logging = lj_session.get_logger()
+        self.log_file_path = lj_session.get_log_file_name();
         conn = engine.raw_connection()
         self.cursor = conn.cursor()
         self.query_time = report_date
@@ -53,7 +54,7 @@ class Report:
 
         argvs['new_house_count'] = self.get_new_house_count()
         argvs['xiao_qu_count'] = self.get_xiao_qu_count()
-
+        argvs['total'] = self.get_house_cout()
         if argvs['fu_du_t'] == 0:
             argvs['die_jia_t_p'] = 0
             argvs['zhang_jia_t_p'] = 0
@@ -84,8 +85,10 @@ class Report:
         # print('总计 {0} {1} {2}'.format(new_total, zt, dt))
         self.image(district_arr, zhang_arr, die_arr)
         self.get_new_house_pie(district_arr, new_house_arr)
+
+
         format_str = "{city_zh}{query_date}({date})二手房大数据(来源于某家网)：\n" \
-              "数据来源于{xiao_qu_count}个小区（在售房源大于等于{min_house}套），新增房源{new_house_count}套。\n" \
+              "数据来源于{xiao_qu_count}个小区（在售房源大于等于{min_house}套），总房源{total}套，新增房源{new_house_count}套。\n" \
               "挂牌价格变动房源共计{total_price_change}套，" \
                      "其中涨价{zhang_jia}套（{zhang_jia_p:.2f}%），跌价{die_jia}套（{die_jia_p:.2f}%）。\n" \
               "涨跌幅5%以内的共计{fu_du_t}套，其中涨价{fu_du_z}({zhang_jia_t_p:.2f}%)套，跌价{fu_du_d}({die_jia_t_p:.2f}%)套。\n" \
@@ -93,9 +96,32 @@ class Report:
         report_str = format_str.format(**argvs)
         self.logging.info(report_str)
 
+    # 通过status查看
     def get_house_cout(self):
-        pass
+        sql = 'select count(*) FROM house h where h.`status`=1'
+        self.cursor.execute(sql)
+        total = self.cursor.fetchone()[0]
+        return total
 
+    def export_xiao_qu_excel(self):
+        sql_price_change = "SELECT 	h.id, 	xq.`name` AS 小区, 	h.title AS 标题, 	p.pre_price AS 昨日总价（万）,p.price AS 今日总价（万）, p.priceChange AS 价格变化（万）, 	p.fudu AS 涨跌幅（百分比）, h.unit_price AS 单价（元）, h.area AS 面积（平方）, d.district AS 区, d.area AS 板块, CONCAT('https://wh.lianjia.com/ershoufang/',h.url, '.html') AS 链接, 	h.hu_xing AS 户型, 	h.zhuang_xiu AS 装修, h.flood AS 楼层, h.chao_xiang AS 朝向, h.star AS 关注, p.change_time AS 时间 FROM price_change_com p, house h, xiao_qu xq, district_area d "
+
+
+    # 通过日志查看
+    def get_house_cout2(self):
+        start = '该页li个数['
+        end = ']检测旧房源'
+        sl = len(start)
+        file = open(r'F:\python\pythonProject\LianJia\logs\20200105\1829_wuhan_log.log', 'r', encoding="utf-8")
+        lines = file.readlines()
+        count = 0
+        for line in lines:
+            i = line.find(start)
+            j = line.find(end)
+            if i != -1 and j != -1:
+                c = line[i + sl:j]
+                count += int(c)
+        print(count)
 
     def get_xiao_qu_count(self):
         sql = 'select count(*) from xiao_qu xq where xq.zai_shou>=' + str(self.__yaml_data['min_house'])

@@ -26,7 +26,6 @@ class LianJiaSession:
         self.__headers = self.get_headers()
         self.__logger = logging.getLogger(self.__logger_name)
         self.__web_session = self.__login()
-        self.__logger.error("登录失败！")
         self.__logger.info('开始爬城市[{0}]'.format(self.city_zh))
 
     def get(self, url):
@@ -50,6 +49,7 @@ class LianJiaSession:
                 data[key_value[0]] = key_value[1]
             web_session.post(login_url, data, headers=self.__headers)
         except Exception:
+            self.__logger.error("登录失败！")
             return None
         return web_session
 
@@ -115,12 +115,15 @@ class LianJiaSession:
     def get_log_path(self):
         return self.__log_path
 
+    def get_log_file_name(self):
+        return self.log_file_name
+
     def __init_logger(self):
         self.__get_log_path()
         log_path = self.__log_path
         now = datetime.now()
         time_str = now.strftime("%H%M")
-        log_file_name = os.path.join(log_path, time_str + '_' + self.city + '_log.log')
+        self.log_file_name = os.path.join(log_path, time_str + '_' + self.city + '_log.log')
         # 创建一个logger
         my_logger = logging.getLogger(self.__logger_name)
 
@@ -128,7 +131,7 @@ class LianJiaSession:
         my_logger.setLevel(logging.INFO)
 
         # 创建一个handler用于写入日志文件
-        file_handler = logging.FileHandler(log_file_name, encoding='utf-8')
+        file_handler = logging.FileHandler(self.log_file_name, encoding='utf-8')
 
         # 创建一个handler用于输出控制台
         console_handler = logging.StreamHandler()

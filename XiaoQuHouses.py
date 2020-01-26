@@ -43,18 +43,19 @@ class XiaoQuHouses(threading.Thread):
                 if xiao_qu.zai_shou != total:
                     self.__updata_zai_shou(total, xiao_qu.id)
                 if total < self.min_house:
-                    self.__logger.info('小区房源[{0}({3})] , 数量({2})太少，跳过] ===> url[{1}] '.format(xiao_qu.name, xiao_qu.url, total, xiao_qu.id))
+                    self.__logger.info('小区房源[{0}({3})] , 数量({2})太少，跳过 ===> url[{1}] '.format(xiao_qu.name, xiao_qu.url, total, xiao_qu.id))
                 elif total > 800:
                     self.__logger.error('小区房源[id: {0}] , 数量({2})异常 ===> url[{1}] '.format(xiao_qu.name, xiao_qu.url, total))
                 else:
                     self.__logger.info('开始爬取小区[{0}] ===> url[{1}]，共发现房源数 : {2}'.format(xiao_qu.name, xiao_qu.url, total))
-                    soup_arr = [soup]
-                    page_url_list = utils.get_all_page(soup)
-                    for url in page_url_list:
-                        soup = self.__parse_other_page(url)
-                        if soup is not None:
-                            soup_arr.append(soup)
-                    self.__xiao_qu_id_soup_queue.put((xiao_qu.id, soup_arr))
+                    if total != 0:
+                        soup_arr = [soup]
+                        page_url_list = utils.get_all_page(soup)
+                        for url in page_url_list:
+                            soup = self.__parse_other_page(url)
+                            if soup is not None:
+                                soup_arr.append(soup)
+                        self.__xiao_qu_id_soup_queue.put((xiao_qu.id, soup_arr))
             else:
                 self.__logger.error('rep is None,小区小区[{0}] url[{1}]'.format(xiao_qu.name, xiao_qu.url))
         except Exception:

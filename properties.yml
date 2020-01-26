@@ -3,7 +3,7 @@ city: wuhan
 # 日志路径,默认当前文件夹下logs文件夹
 #log_path: C:\Users\Administrator\Desktop\LianJia\
 # 小区最少房源数，低于则不爬取
-min_house: 10
+min_house: -1
 # 生产者线程数,负责获取数据，建议1-4
 producer_num: 3
 # 消费者线程数，负责解析数据，建议1-2

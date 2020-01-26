@@ -148,6 +148,6 @@ if '__main__' == __name__:
         chengJiaoHouse = ChengJiaoHouse(city)
     else:
         chengJiaoHouse = ChengJiaoHouse()
-    chengJiaoHouse.parse_all(True)
-    # chengJiaoHouse.parse_latest()
+    # chengJiaoHouse.parse_all(True)
+    chengJiaoHouse.parse_latest()
     # chengJiaoHouse.test()
